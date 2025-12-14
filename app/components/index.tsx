@@ -9,6 +9,8 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
+import BottomNav from '@/app/components/bottom-nav'
+import type { BottomNavKey } from '@/app/components/bottom-nav'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
@@ -33,6 +35,9 @@ const Main: FC<IMainProps> = () => {
   const isMobile = media === MediaType.mobile
   const hasSetAppConfig = APP_ID && API_KEY
 
+  // Mobile default tab: Chat (Option A)
+  const [mobileTab, setMobileTab] = useState<BottomNavKey>('new')
+
   /*
   * app info
   */
@@ -41,7 +46,7 @@ const Main: FC<IMainProps> = () => {
   const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null)
   const [inited, setInited] = useState<boolean>(false)
   // in mobile, show sidebar by click button
-  const [isShowSidebar, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
+  const [, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
   const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
     enabled: false,
     number_limits: 2,
@@ -166,6 +171,8 @@ const Main: FC<IMainProps> = () => {
     // trigger handleConversationSwitch
     setCurrConversationId(id, APP_ID)
     hideSidebar()
+    // After selecting a conversation, go to Chat tab
+    setMobileTab('new')
   }
 
   /*
@@ -174,15 +181,9 @@ const Main: FC<IMainProps> = () => {
   const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
   const chatListDomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    // scroll to bottom with page-level scrolling
-    if (chatListDomRef.current) {
-      setTimeout(() => {
-        chatListDomRef.current?.scrollIntoView({
-          behavior: 'auto',
-          block: 'end',
-        })
-      }, 50)
-    }
+    // In embedded/full-height mode the chat list has its own internal scroll.
+    // Avoid page-level scrollIntoView here (it makes the whole shell scroll and can hide the sidebar).
+    // Scrolling to bottom is handled inside the Chat component.
   }, [chatList, currConversationId])
   // user can not edit inputs if user had send message
   const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
@@ -651,51 +652,94 @@ const Main: FC<IMainProps> = () => {
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
-    <div className='bg-gray-100'>
+    <div className='min-h-dvh w-full bg-slate-50 text-slate-900 overflow-hidden'>
       <Header
         title={APP_INFO.title}
-        isMobile={isMobile}
+        // Header is desktop/tablet only; mobile navigation is bottom nav
+        isMobile={false}
         onShowSideBar={showSidebar}
         onCreateNewChat={() => handleConversationIdChange('-1')}
       />
-      <div className="flex rounded-t-2xl bg-white overflow-hidden">
-        {/* sidebar */}
-        {!isMobile && renderSidebar()}
-        {isMobile && isShowSidebar && (
-          <div className='fixed inset-0 z-50' style={{ backgroundColor: 'rgba(35, 56, 118, 0.2)' }} onClick={hideSidebar} >
-            <div className='inline-block' onClick={e => e.stopPropagation()}>
-              {renderSidebar()}
-            </div>
-          </div>
-        )}
-        {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
-          <ConfigSence
-            conversationName={conversationName}
-            hasSetInputs={hasSetInputs}
-            isPublicVersion={isShowPrompt}
-            siteInfo={APP_INFO}
-            promptConfig={promptConfig}
-            onStartChat={handleStartChat}
-            canEditInputs={canEditInputs}
-            savedInputs={currInputs as Record<string, any>}
-            onInputsChange={setCurrInputs}
-          ></ConfigSence>
 
-          {
-            hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
-                <Chat
-                  chatList={chatList}
-                  onSend={handleSend}
-                  onFeedback={handleFeedback}
-                  isResponding={isResponding}
-                  checkCanSend={checkCanSend}
-                  visionConfig={visionConfig}
-                  fileConfig={fileConfig}
-                />
-              </div>)
-          }
+      {/* Layout contract: one container, one gutter system */}
+      <div className='mx-auto flex min-h-[calc(100dvh_-_3.5rem)] w-full max-w-6xl flex-col px-4 tablet:px-6 pb-[calc(4rem+env(safe-area-inset-bottom))] tablet:pb-6 overflow-hidden'>
+        <div className='flex min-h-0 flex-1 flex-col bg-white tablet:rounded-2xl tablet:border tablet:border-slate-200 shadow-sm overflow-hidden'>
+          <div className='flex min-h-0 flex-1 overflow-hidden'>
+            {/* Sidebar is desktop/tablet split-pane only */}
+            {!isMobile && (
+              <div className='w-72 border-r border-slate-200 min-h-0 overflow-hidden'>
+                {renderSidebar()}
+              </div>
+            )}
+
+            {/* Main pane */}
+            <main className='flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden'>
+              {/* Mobile: Chats tab is the conversation list page */}
+              {isMobile && mobileTab === 'chats' && (
+                <div className='min-h-0 flex-1 overflow-hidden'>
+                  {renderSidebar()}
+                </div>
+              )}
+
+              {/* Mobile: Settings placeholder */}
+              {isMobile && mobileTab === 'settings' && (
+                <div className='p-4 tablet:p-6'>
+                  <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+                    <div className='text-sm font-semibold text-slate-900'>Settings</div>
+                    <div className='mt-1 text-sm text-slate-500'>Coming soon.</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Chat surface (desktop/tablet, or mobile Chat tab) */}
+              {(!isMobile || mobileTab === 'new') && (
+                <div className='flex min-h-0 flex-1 flex-col p-4 tablet:p-6 overflow-hidden'>
+                  <div className='mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden'>
+                    <ConfigSence
+                      conversationName={conversationName}
+                      hasSetInputs={hasSetInputs}
+                      isPublicVersion={isShowPrompt}
+                      siteInfo={APP_INFO}
+                      promptConfig={promptConfig}
+                      onStartChat={handleStartChat}
+                      canEditInputs={canEditInputs}
+                      savedInputs={currInputs as Record<string, any>}
+                      onInputsChange={setCurrInputs}
+                    ></ConfigSence>
+
+                    {hasSetInputs && (
+                      <div className='relative mt-4 min-h-0 flex-1 overflow-hidden' ref={chatListDomRef}>
+                        <Chat
+                          chatList={chatList}
+                          onSend={handleSend}
+                          onFeedback={handleFeedback}
+                          isResponding={isResponding}
+                          checkCanSend={checkCanSend}
+                          visionConfig={visionConfig}
+                          fileConfig={fileConfig}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {/* Mobile bottom nav (Option A) */}
+          {isMobile && (
+            <BottomNav
+              activeKey={mobileTab}
+              onChange={(k) => {
+                setMobileTab(k)
+                if (k === 'new') {
+                  // Default tab is Chat; selecting Chat tab should not always create new chat.
+                  // New chat happens only via the "New" action.
+                }
+              }}
+              onNewChat={() => handleConversationIdChange('-1')}
+            />
+          )}
         </div>
       </div>
     </div>

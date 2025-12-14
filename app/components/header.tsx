@@ -18,28 +18,46 @@ const Header: FC<IHeaderProps> = ({
   onCreateNewChat,
 }) => {
   return (
-    <div className="shrink-0 flex items-center justify-between h-12 px-3 bg-gray-100">
-      {isMobile
-        ? (
-          <div
-            className='flex items-center justify-center h-8 w-8 cursor-pointer'
-            onClick={() => onShowSideBar?.()}
-          >
-            <Bars3Icon className="h-4 w-4 text-gray-500" />
+    <header className='sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60'>
+      <div className='mx-auto flex h-14 max-w-6xl items-center justify-between px-3 tablet:px-6'>
+        <div className='flex items-center gap-2'>
+          {isMobile
+            ? (
+              <button
+                type='button'
+                aria-label='Open sidebar'
+                className='inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 active:bg-slate-200'
+                onClick={() => onShowSideBar?.()}
+              >
+                <Bars3Icon className='h-5 w-5 text-slate-600' />
+              </button>
+            )
+            : (
+              <div className='h-10 w-10' />
+            )}
+
+          <div className='flex items-center gap-2'>
+            <AppIcon size='small' />
+            <div className='text-sm font-semibold text-slate-900 line-clamp-1'>{title}</div>
           </div>
-        )
-        : <div></div>}
-      <div className='flex items-center space-x-2'>
-        <AppIcon size="small" />
-        <div className=" text-sm text-gray-800 font-bold">{title}</div>
+        </div>
+
+        {isMobile
+          ? (
+            <button
+              type='button'
+              aria-label='Create new chat'
+              className='inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 active:bg-slate-200'
+              onClick={() => onCreateNewChat?.()}
+            >
+              <PencilSquareIcon className='h-5 w-5 text-slate-600' />
+            </button>
+          )
+          : (
+            <div className='h-10 w-10' />
+          )}
       </div>
-      {isMobile
-        ? (
-          <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()} >
-            <PencilSquareIcon className="h-4 w-4 text-gray-500" />
-          </div>)
-        : <div></div>}
-    </div>
+    </header>
   )
 }
 

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TemplateVarPanel, { PanelTitle, VarOpBtnGroup } from '../value-panel'
 import FileUploaderInAttachmentWrapper from '../base/file-uploader-in-attachment'
-import s from './style.module.css'
 import { AppInfoComp, ChatBtn, EditBtn, PromptTemplate } from './massive-component'
 import type { AppInfo, PromptConfig } from '@/types/app'
 import Toast from '@/app/components/base/toast'
@@ -64,7 +63,7 @@ const Welcome: FC<IWelcomeProps> = ({
     else {
       setInputs(savedInputs)
     }
-  }, [savedInputs])
+  }, [savedInputs, promptConfig])
 
   const highLightPromoptTemplate = (() => {
     if (!promptConfig) { return '' }
@@ -81,18 +80,20 @@ const Welcome: FC<IWelcomeProps> = ({
 
   const renderHeader = () => {
     return (
-      <div className='absolute top-0 left-0 right-0 flex items-center justify-between border-b border-gray-100 mobile:h-12 tablet:h-16 px-8 bg-white'>
-        <div className='text-gray-900'>{conversationName}</div>
+      <div className='flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 tablet:px-6'>
+        <div className='text-sm font-semibold text-slate-900 line-clamp-1'>{conversationName}</div>
       </div>
     )
   }
 
   const renderInputs = () => {
     return (
-      <div className='space-y-3'>
+      <div className='space-y-4'>
         {promptConfig.prompt_variables.map(item => (
-          <div className='tablet:flex items-start mobile:space-y-2 tablet:space-y-0 mobile:text-xs tablet:text-sm' key={item.key}>
-            <label className={`flex-shrink-0 flex items-center tablet:leading-9 mobile:text-gray-700 tablet:text-gray-900 mobile:font-medium pc:font-normal ${s.formLabel}`}>{item.name}</label>
+          <div className='space-y-2 tablet:grid tablet:grid-cols-[140px_1fr] tablet:items-start tablet:gap-3 tablet:space-y-0' key={item.key}>
+            <label className='flex items-center text-sm font-medium text-slate-700'>
+              {item.name}
+            </label>
             {item.type === 'select'
               && (
                 <Select
@@ -101,7 +102,7 @@ const Welcome: FC<IWelcomeProps> = ({
                   onSelect={(i) => { setInputs({ ...inputs, [item.key]: i.value }) }}
                   items={(item.options || []).map(i => ({ name: i, value: i }))}
                   allowSearch={false}
-                  bgClassName='bg-gray-50'
+                  bgClassName='bg-slate-50'
                 />
               )}
             {item.type === 'string' && (
@@ -109,13 +110,13 @@ const Welcome: FC<IWelcomeProps> = ({
                 placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs?.[item.key] || ''}
                 onChange={(e) => { setInputs({ ...inputs, [item.key]: e.target.value }) }}
-                className={'w-full flex-grow py-2 pl-3 pr-3 box-border rounded-lg bg-gray-50'}
+                className='w-full rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-1 ring-transparent focus:ring-slate-200'
                 maxLength={item.max_length || DEFAULT_VALUE_MAX_LEN}
               />
             )}
             {item.type === 'paragraph' && (
               <textarea
-                className="w-full h-[104px] flex-grow py-2 pl-3 pr-3 box-border rounded-lg bg-gray-50"
+                className='w-full min-h-[104px] rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-1 ring-transparent focus:ring-slate-200'
                 placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs?.[item.key] || ''}
                 onChange={(e) => { setInputs({ ...inputs, [item.key]: e.target.value }) }}
@@ -123,48 +124,30 @@ const Welcome: FC<IWelcomeProps> = ({
             )}
             {item.type === 'number' && (
               <input
-                type="number"
-                className="block w-full p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 sm:text-xs focus:ring-blue-500 focus:border-blue-500 "
-                placeholder={`${item.name}${!item.required ? `(${t('appDebug.variableTable.optional')})` : ''}`}
+                type='number'
+                className='w-full rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-1 ring-transparent focus:ring-slate-200'
+                placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs[item.key]}
                 onChange={(e) => { onInputsChange({ ...inputs, [item.key]: e.target.value }) }}
               />
             )}
 
-            {
-              item.type === 'file' && (
-                <FileUploaderInAttachmentWrapper
-                  fileConfig={{
-                    allowed_file_types: item.allowed_file_types,
-                    allowed_file_extensions: item.allowed_file_extensions,
-                    allowed_file_upload_methods: item.allowed_file_upload_methods!,
-                    number_limits: 1,
-                    fileUploadConfig: {} as any,
-                  }}
-                  onChange={(files) => {
-                    setInputs({ ...inputs, [item.key]: files[0] })
-                  }}
-                  value={inputs?.[item.key] || []}
-                />
-              )
-            }
-            {
-              item.type === 'file-list' && (
+            {item.type === 'file' && (
+              <div className='w-full'>
                 <FileUploaderInAttachmentWrapper
                   fileConfig={{
                     allowed_file_types: item.allowed_file_types,
                     allowed_file_extensions: item.allowed_file_extensions,
                     allowed_file_upload_methods: item.allowed_file_upload_methods!,
                     number_limits: item.max_length,
-                    fileUploadConfig: {} as any,
-                  }}
+                  } as any}
+                  value={inputs?.[item.key] ? [inputs[item.key]] : []}
                   onChange={(files) => {
-                    setInputs({ ...inputs, [item.key]: files })
+                    setInputs({ ...inputs, [item.key]: files?.[0] })
                   }}
-                  value={inputs?.[item.key] || []}
                 />
-              )
-            }
+              </div>
+            )}
           </div>
         ))}
       </div>

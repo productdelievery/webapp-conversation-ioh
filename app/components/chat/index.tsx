@@ -59,6 +59,26 @@ const Chat: FC<IChatProps> = ({
   const [query, setQuery] = React.useState('')
   const queryRef = useRef('')
 
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  // Keep the message list pinned to the bottom (embed-friendly)
+  useEffect(() => {
+    // If user has scrolled up, don't force-scroll. Only auto-scroll when near bottom.
+    const el = listRef.current
+    if (!el) {
+      return
+    }
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    const isNearBottom = distanceFromBottom < 120
+
+    if (isNearBottom) {
+      // Use scrollIntoView on a sentinel to avoid affecting outer containers.
+      bottomRef.current?.scrollIntoView({ block: 'end' })
+    }
+  }, [chatList.length])
+
   const handleContentChange = (e: any) => {
     const value = e.target.value
     setQuery(value)
@@ -142,20 +162,22 @@ const Chat: FC<IChatProps> = ({
   }
 
   return (
-    <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
+    <div className={cn('flex min-h-0 flex-1 flex-col', !feedbackDisabled && 'px-0')}>
       {/* Chat List */}
-      <div className="h-full space-y-[30px]">
+      <div ref={listRef} className='min-h-0 flex-1 overflow-y-auto pr-1 space-y-6'>
         {chatList.map((item) => {
           if (item.isAnswer) {
             const isLast = item.id === chatList[chatList.length - 1].id
-            return <Answer
-              key={item.id}
-              item={item}
-              feedbackDisabled={feedbackDisabled}
-              onFeedback={onFeedback}
-              isResponding={isResponding && isLast}
-              suggestionClick={suggestionClick}
-            />
+            return (
+              <Answer
+                key={item.id}
+                item={item}
+                feedbackDisabled={feedbackDisabled}
+                onFeedback={onFeedback}
+                isResponding={isResponding && isLast}
+                suggestionClick={suggestionClick}
+              />
+            )
           }
           return (
             <Question
@@ -167,74 +189,83 @@ const Chat: FC<IChatProps> = ({
             />
           )
         })}
+        <div ref={bottomRef} />
       </div>
-      {
-        !isHideSendInput && (
-          <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
-            <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
-              {
-                visionConfig?.enabled && (
-                  <>
-                    <div className='absolute bottom-2 left-2 flex items-center'>
-                      <ChatImageUploader
-                        settings={visionConfig}
-                        onUpload={onUpload}
-                        disabled={files.length >= visionConfig.number_limits}
-                      />
-                      <div className='mx-1 w-[1px] h-4 bg-black/5' />
-                    </div>
-                    <div className='pl-[52px]'>
-                      <ImageList
-                        list={files}
-                        onRemove={onRemove}
-                        onReUpload={onReUpload}
-                        onImageLinkLoadSuccess={onImageLinkLoadSuccess}
-                        onImageLinkLoadError={onImageLinkLoadError}
-                      />
-                    </div>
-                  </>
-                )
-              }
-              {
-                fileConfig?.enabled && (
-                  <div className={`${visionConfig?.enabled ? 'pl-[52px]' : ''} mb-1`}>
-                    <FileUploaderInAttachmentWrapper
-                      fileConfig={fileConfig}
-                      value={attachmentFiles}
-                      onChange={setAttachmentFiles}
-                    />
-                  </div>
-                )
-              }
-              <Textarea
-                className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none
-                  ${visionConfig?.enabled && 'pl-12'}
-                `}
-                value={query}
-                onChange={handleContentChange}
-                onKeyUp={handleKeyUp}
-                onKeyDown={handleKeyDown}
-                autoSize
-              />
-              <div className="absolute bottom-2 right-6 flex items-center h-8">
-                <div className={`${s.count} mr-3 h-5 leading-5 text-sm bg-gray-50 text-gray-500 px-2 rounded`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
-                  }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
+
+      {!isHideSendInput && (
+        <div className='shrink-0 border-t border-slate-200 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60'>
+          <div className='relative p-2 border border-slate-200 rounded-2xl bg-white shadow-sm'>
+            {visionConfig?.enabled && (
+              <>
+                <div className='absolute bottom-3 left-3 flex items-center'>
+                  <ChatImageUploader
+                    settings={visionConfig}
+                    onUpload={onUpload}
+                    disabled={files.length >= visionConfig.number_limits}
+                  />
+                  <div className='mx-2 w-px h-5 bg-black/5' />
+                </div>
+                <div className='pl-[56px]'>
+                  <ImageList
+                    list={files}
+                    onRemove={onRemove}
+                    onReUpload={onReUpload}
+                    onImageLinkLoadSuccess={onImageLinkLoadSuccess}
+                    onImageLinkLoadError={onImageLinkLoadError}
+                  />
+                </div>
+              </>
+            )}
+
+            {fileConfig?.enabled && (
+              <div className={cn(visionConfig?.enabled ? 'pl-[56px]' : '', 'mb-2')}>
+                <FileUploaderInAttachmentWrapper
+                  fileConfig={fileConfig}
+                  value={attachmentFiles}
+                  onChange={setAttachmentFiles}
+                />
               </div>
+            )}
+
+            <Textarea
+              className={cn(
+                'block w-full rounded-xl bg-slate-50 px-3 py-2 pr-24 text-base leading-6 text-slate-800 outline-none resize-none',
+                visionConfig?.enabled && 'pl-14',
+              )}
+              value={query}
+              onChange={handleContentChange}
+              onKeyUp={handleKeyUp}
+              onKeyDown={handleKeyDown}
+              autoSize
+            />
+
+            <div className='absolute bottom-3 right-3 flex items-center h-9'>
+              <div className='mr-2 h-6 leading-6 text-xs bg-slate-50 text-slate-500 px-2 rounded-lg'>
+                {query.trim().length}
+              </div>
+              <Tooltip
+                selector='send-tip'
+                htmlContent={
+                  <div>
+                    <div>{t('common.operation.send')} Enter</div>
+                    <div>{t('common.operation.lineBreak')} Shift Enter</div>
+                  </div>
+                }
+              >
+                <button
+                  type='button'
+                  className={cn(
+                    'inline-flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100',
+                    s.sendBtn,
+                  )}
+                  onClick={handleSend}
+                  aria-label='Send'
+                />
+              </Tooltip>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
     </div>
   )
 }

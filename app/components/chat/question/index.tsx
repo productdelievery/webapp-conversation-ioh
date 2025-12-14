@@ -13,29 +13,38 @@ type IQuestionProps = Pick<IChatItem, 'id' | 'content' | 'useCurrentUserAvatar'>
 
 const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSrcs }) => {
   const userName = ''
+  const userInitial = userName?.[0]?.toLocaleUpperCase() || 'Y'
+
   return (
-    <div className='flex items-start justify-end' key={id}>
-      <div>
-        <div className={`${s.question} relative text-sm text-gray-900`}>
-          <div
-            className={'mr-2 py-3 px-4 bg-blue-500 rounded-tl-2xl rounded-b-2xl'}
-          >
+    <div key={id} className='group'>
+      <div className='flex items-start gap-3'>
+        {useCurrentUserAvatar
+          ? (
+            <div className='mt-0.5 h-9 w-9 shrink-0 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-semibold'>
+              {userInitial}
+            </div>
+          )
+          : (
+            <div className={`${s.questionIcon} mt-0.5 h-9 w-9 shrink-0 rounded-full`} />
+          )}
+
+        <div className='min-w-0 flex-1'>
+          <div className='flex items-center gap-2'>
+            <div className='text-sm font-semibold text-slate-900'>You</div>
+            <div className='text-xs text-slate-400'>•</div>
+            <div className='text-xs text-slate-400'>Just now</div>
+          </div>
+
+          <div className='mt-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm'>
             {imgSrcs && imgSrcs.length > 0 && (
-              <ImageGallery srcs={imgSrcs} />
+              <div className='mb-2'>
+                <ImageGallery srcs={imgSrcs} />
+              </div>
             )}
             <StreamdownMarkdown content={content} />
           </div>
         </div>
       </div>
-      {useCurrentUserAvatar
-        ? (
-          <div className='w-10 h-10 shrink-0 leading-10 text-center mr-2 rounded-full bg-primary-600 text-white'>
-            {userName?.[0].toLocaleUpperCase()}
-          </div>
-        )
-        : (
-          <div className={`${s.questionIcon} w-10 h-10 shrink-0 `}></div>
-        )}
     </div>
   )
 }
